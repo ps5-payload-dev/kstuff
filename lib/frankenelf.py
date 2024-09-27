@@ -12,3 +12,5 @@ with open(sys.argv[1], 'r+b') as file:
     file.seek(64+56+32)
     file.write(filesz)
     file.write(memsz)
+    end = file.seek(0, 2)
+    file.write(bytes((-end) % 4))

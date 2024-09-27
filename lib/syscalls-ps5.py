@@ -127,17 +127,17 @@ section .rodata.error_str
 error_str:
 db "__error", 0
 
-section .data.addr__dynlib_dlsym
+section .bss.addr__dynlib_dlsym
 global addr__dynlib_dlsym
 addr__dynlib_dlsym:
 dq 0
 
-section data.addr____error
+section .bss.addr____error
 global addr____error
 addr____error:
 dq 0
 
-section .data.p_syscall
+section .bss.p_syscall
 p_syscall:
 dq 0\
 ''')

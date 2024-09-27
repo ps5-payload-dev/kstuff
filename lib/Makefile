@@ -1,4 +1,4 @@
-all: lib.a lib-ps5.a lib-elf.a
+all: lib.a lib-ps5.a lib-elf.a lib-elf-ps5.a
 
 clean:
 	rm -f lib.a lib-*.a *.o syscalls.asm syscalls-ps5.asm
@@ -38,3 +38,6 @@ lib-ps5.a: crt.o dl.o syscalls-ps5.o
 
 lib-elf.a: crt-elf.o crt-elf-c.o dl.o syscalls.o
 	ld -r crt-elf.o crt-elf-c.o dl.o syscalls.o -o lib-elf.a
+
+lib-elf-ps5.a: crt-elf.o crt-elf-c.o dl.o syscalls-ps5.o
+	ld -r crt-elf.o crt-elf-c.o dl.o syscalls-ps5.o -o lib-elf-ps5.a
