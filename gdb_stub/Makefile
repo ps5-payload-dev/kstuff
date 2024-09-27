@@ -14,11 +14,11 @@ payload.bin: payload.elf
 	file payload.bin | fgrep -q 'payload.bin: DOS executable (COM)'
 
 payload-kek.elf: ../lib/lib.a dbg.c main.c ps4libs.c
-	gcc -g -isystem ../freebsd-headers -nostdinc -nostdlib -fno-stack-protector -fPIE -ffreestanding -static ../lib/lib-ps5.a -D__PS4__ -DINTERRUPTER_THREAD -DNO_BREAKPOINT_EMULATION -DPS5KEK -DPS4LIBS dbg.c main.c ps4libs.c -o payload-kek.elf
+	gcc -g -isystem ../freebsd-headers -nostdinc -nostdlib -fno-stack-protector -fPIE -ffreestanding -static ../lib/lib-elf-ps5.a -D__PS4__ -DINTERRUPTER_THREAD -DNO_BREAKPOINT_EMULATION -DPS5KEK -DPS4LIBS dbg.c main.c ps4libs.c -o payload-kek.elf -Wl,-z,max-page-size=16384 -Wl,-zcommon-page-size=16384
 
 payload-kek.bin: payload-kek.elf
 	objcopy payload-kek.elf --only-section .text --only-section .data --only-section .bss --only-section .rodata --set-section-flags .bss=alloc,load,contents -O binary payload-kek.bin
-	file payload-kek.bin | fgrep -q 'payload-kek.bin: DOS executable (COM)'
+	python3 ../lib/frankenelf.py payload-kek.bin
 
 gdbstub.elf: ../lib/lib.a dbg.c _end.c
 	gcc -g -isystem ../freebsd-headers -nostdinc -nostdlib -fno-stack-protector -fPIE -ffreestanding -static ../lib/lib.a -D__PS4__ -Ddbg_enter=main -DBLOB dbg.c _end.c -Wl,-gc-sections -o gdbstub.elf

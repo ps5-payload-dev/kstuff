@@ -73,11 +73,12 @@ push r8
 push r9
 push rax
 push rax
-push rax
+mov r10, [rel addr__dynlib_dlsym]
+push r10
 mov edi, 0x2001
 lea rsi, [rel getpid_str]
 mov rdx, rsp
-call [rel addr__dynlib_dlsym]
+call r10
 pop r10
 pop rax
 pop rax
