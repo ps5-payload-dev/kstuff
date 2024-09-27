@@ -25,7 +25,7 @@ void kill_thread(void)
     };
     sigaction(SIGUSR1, &sa, 0);
     sigset_t ss = {0};
-	ss.__bits[_SIG_WORD(SIGUSR1)] |= _SIG_BIT(SIGUSR1);
+    ss.__bits[_SIG_WORD(SIGUSR1)] |= _SIG_BIT(SIGUSR1);
     sigprocmask(SIG_BLOCK, &ss, NULL);
     for(int i = 0; i < 1000; i++)
         kill(getpid(), SIGUSR1);

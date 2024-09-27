@@ -106,7 +106,7 @@ static uint64_t dbgregs_for_fself[6] = {
     0, 0x455,
 #else
     0, 0,
-    0, 0x455,
+    0, 0x405,
 #endif
 };
 

@@ -893,8 +893,32 @@ static struct parasite_desc* get_parasites(size_t* desc_size)
     }
 }
 
+static inline uint64_t rdtsc(void)
+{
+    uint32_t eax, edx;
+    asm volatile("rdtsc":"=a"(eax),"=d"(edx)::"memory");
+    return (uint64_t)edx << 32 | eax;
+}
+
+//without kstuff = 2308259098
+//with kstuff and in-kelf checks = 86633419408 (37.5 times slower)
+//with kstuff and no in-kelf checks = 68129284331 (39.5 times slower)
+uint64_t bench(void)
+{
+    uint64_t start = rdtsc();
+    for(int i = 0; i < 1000000; i++)
+        getpid();
+    return rdtsc() - start;
+}
+
 int main(void* ds, int a, int b, uintptr_t c, uintptr_t d)
 {
+    p_kekcall = (char*)dlsym((void*)0x2001, "getpid") + 7;
+    if(!kekcall(0, 0, 0, 0, 0, 0, 0xffffffff00000027))
+    {
+        notify("ps5-kstuff is already loaded");
+        return 1;
+    }
     if(r0gdb_init(ds, a, b, c, d))
     {
 #ifndef FIRMWARE_PORTING
@@ -946,22 +970,36 @@ int main(void* ds, int a, int b, uintptr_t c, uintptr_t d)
         mem_blocks[i+1] = (mem_blocks[i] ? mem_blocks[i] + (1<<23) : 0);
     }
     gdb_remote_syscall("write", 3, 0, (uintptr_t)1, (uintptr_t)"done\n", (uintptr_t)5);
-    uint64_t shared_area = (uint64_t)kmalloc(8192);
-    shared_area = ((shared_area - 1) | 4095) + 1;
+    uint64_t comparison_table_base = (uint64_t)kmalloc(131072);
+    uint64_t comparison_table = ((comparison_table_base - 1) | 65535) + 1;
+    uint8_t* comparison_table_data = mmap(0, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    for(size_t i = 0; i < 256; i++)
+        for(size_t j = 0; j < 256; j++)
+            comparison_table_data[256*i+j] = 8*(1+(i>j)-(i<j));
+    //trying to copyin the whole 64k at once hangs here for some reason
+    for(size_t i = 0; i < 256; i++)
+        copyin(comparison_table+256*i, comparison_table_data+256*i, 256);
+    uint64_t shared_area;
+    if(comparison_table - comparison_table_base > 4096)
+        shared_area = comparison_table - 4096;
+    else
+        shared_area = comparison_table + 65536;
     kmemzero((void*)shared_area, 4096);
     uint64_t uelf_virt_base = (find_empty_pml4_index(0) << 39) | (-1ull << 48);
     uint64_t dmem_virt_base = (find_empty_pml4_index(1) << 39) | (-1ull << 48);
     shared_area = virt2phys(shared_area) + dmem_virt_base;
-    uint64_t uelf_parasite_desc = (uint64_t)kmalloc(8192);
-    uelf_parasite_desc = ((uelf_parasite_desc - 1) | 4095) + 1;
+    uint64_t kelf_parasite_desc = (uint64_t)kmalloc(8192);
+    kelf_parasite_desc = ((kelf_parasite_desc - 1) | 4095) + 1;
     for(int i = 0; i < desc->lim_total; i++)
         desc->parasites[i].address += kdata_base;
-    kmemcpy((void*)uelf_parasite_desc, desc, desc_size);
-    uelf_parasite_desc = virt2phys(uelf_parasite_desc) + dmem_virt_base;
+    kmemcpy((void*)kelf_parasite_desc, desc, desc_size);
+    uint64_t uelf_parasite_desc = virt2phys(kelf_parasite_desc) + dmem_virt_base;
     volatile int zero = 0; //hack to force runtime calculation of string pointers
     const char* symbols[] = {
+        "comparison_table"+zero,
         "dmem"+zero,
         "parasites"+zero,
+        "parasites_kmem"+zero,
         "int1_handler"+zero,
         "int13_handler"+zero,
         ".ist_errc"+zero,
@@ -978,15 +1016,17 @@ int main(void* ds, int a, int b, uintptr_t c, uintptr_t d)
         0,
     };
     uint64_t values[] = {
+        comparison_table,      // comparison_table
         dmem_virt_base,        // dmem
         uelf_parasite_desc,    // parasites
+        kelf_parasite_desc,    // parasites_kmem
         int1_handler,          // int1_handler
         int13_handler,         // int13_handler
         0x1237,                // .ist_errc
         0x1238,                // .ist_noerrc
         0x1239,                // .ist4
         0x1234,                // .pcpu
-        shared_area, // shared_area
+        shared_area,           // shared_area
         0x123a,                // .tss
         0x1235,                // .uelf_cr3
         0x1236,                // .uelf_entry
@@ -1088,7 +1128,6 @@ int main(void* ds, int a, int b, uintptr_t c, uintptr_t d)
         copyin(offsets.utoken, &q, 4);
     }
     gdb_remote_syscall("write", 3, 0, (uintptr_t)1, (uintptr_t)"done\npatching shellcore... ", (uintptr_t)27);
-    p_kekcall = (char*)dlsym((void*)0x2001, "getpid") + 7;
     //restore the gdb_stub's SIGTRAP handler
     struct sigaction sa;
     sigaction(SIGBUS, 0, &sa);

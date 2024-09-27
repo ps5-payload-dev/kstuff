@@ -18,6 +18,8 @@ extern uelf_cr3
 extern uelf_entry
 extern ist_errc
 extern ist_noerrc
+extern parasites_kmem
+extern comparison_table
 
 global _start
 
@@ -40,6 +42,26 @@ dq %%stack_after
 dq 0 ; last argument of iret, also popped into rbp
 %endmacro
 
+; pokew where, value
+%macro pokew 2
+dq pop_all_iret
+; set argument
+times iret_rdi db 0
+dq (%1)
+times iret_rsi-iret_rdi-8 db 0
+dq %%stack_after
+times iret_rcx-iret_rsi-8 db 0
+dq 2
+times iret_rip-iret_rcx-8 db 0
+dq rep_movsb_pop_rbp_ret
+dq 0x20
+dq 2
+dq %%stack_after
+dq 0
+%%stack_after:
+dq (%2) ; data to be copied, also popped into rbp
+%endmacro
+
 ; pokeq where, value
 %macro pokeq 2
 dq pop_all_iret
@@ -58,6 +80,60 @@ dq %%stack_after
 dq 0
 %%stack_after:
 dq (%2) ; data to be copied, also popped into rbp
+%endmacro
+
+; cmpb ptr1, ptr2, is_less, is_equal, is_greater
+%macro cmpb 5
+memcpy %%poke1+iret_rsi+9, (%1), 1
+memcpy %%poke1+iret_rsi+8, (%2), 1
+%%poke1:
+memcpy %%poke2+iret_rsi+8, comparison_table, 1
+%%poke2:
+memcpy %%iret+24, %%jump_table, 8
+dq doreti_iret
+%%iret:
+dq nop_ret
+dq 0x20
+dq 2
+dq 0
+dq 0
+section .data.qword
+align 256
+%%jump_table:
+dq (%3)
+dq (%4)
+dq (%5)
+section .text
+%endmacro
+
+; cmpwbe ptr1, ptr2, is_less, is_equal, is_greater
+%macro cmpwbe 5
+cmpb (%1), (%2), (%3), %%next_check, (%5)
+%%next_check:
+cmpb (%1)+1, (%2)+1, (%3), (%4), (%5)
+%endmacro
+
+; cmpdbe ptr1, ptr2, is_less, is_equal, is_greater
+%macro cmpdbe 5
+cmpwbe (%1), (%2), (%3), %%next_check, (%5)
+%%next_check:
+cmpwbe (%1)+2, (%2)+2, (%3), (%4), (%5)
+%endmacro
+
+; cmpqbe ptr1, ptr2, is_less, is_equal, is_greater
+%macro cmpqbe 5
+cmpdbe (%1), (%2), (%3), %%next_check, (%5)
+%%next_check:
+cmpdbe (%1)+4, (%2)+4, (%3), (%4), (%5)
+%endmacro
+
+; cmpqibe ptr1, imm, is_less, is_equal, is_greater
+%macro cmpqibe 5
+cmpqbe (%1), %%value, (%3), (%4), (%5)
+section .data.qword
+%%value:
+dq (%2)
+section .text
 %endmacro
 
 _start:
@@ -116,6 +192,13 @@ dq 0
 errc_entry:
 memcpy regs_for_exit, errc_regs_stash, iret_rip-8
 memcpy regs_for_exit+iret_rip-8, errc_iret_frame-8, 48
+; looks like these checks are actually slower than a roundtrip to uelf
+;cmpqbe regs_for_exit+iret_rip, parasites_kmem+16, .next1, .decrypt_rdi_ret, .next1
+;.next1:
+;cmpqbe regs_for_exit+iret_rip, parasites_kmem+32, .next2, .decrypt_rsi_ret, .next2
+;.next2:
+;cmpqbe regs_for_exit+iret_rip, parasites_kmem+48, .slow_path, .decrypt_rsi_ret, .slow_path
+;.slow_path:
 memcpy justreturn_bak, errc_justreturn-8, 40
 dq doreti_iret
 dq nop_ret
@@ -123,6 +206,26 @@ dq 0x20
 dq 2
 dq main
 dq 0
+;.decrypt_rdi_ret:
+;pokew regs_for_exit+iret_rdi+6, 0xffff
+;dq doreti_iret
+;dq nop_ret
+;dq 0x20
+;dq 2
+;dq .copy_justreturn_and_iret
+;dq 0
+;.decrypt_rsi_ret:
+;pokew regs_for_exit+iret_rsi+6, 0xffff
+;.copy_justreturn_and_iret:
+;memcpy regs_for_exit+iret_rdx, errc_justreturn+8, 8
+;memcpy regs_for_exit+iret_rcx, errc_justreturn+16, 8
+;memcpy regs_for_exit+iret_rax, errc_justreturn+24, 8
+;dq doreti_iret
+;dq pop_all_iret
+;dq 0x20
+;dq 2
+;dq regs_for_exit
+;dq 0
 
 align 16
 dq 0
