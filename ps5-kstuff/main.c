@@ -582,10 +582,7 @@ static const struct shellcore_patch* get_shellcore_patches(size_t* n_patches)
         *n_patches = sizeof(shellcore_patches_ ## x) / sizeof(*shellcore_patches_ ## x);\
         patches = shellcore_patches_ ## x;\
         break
-    int(*sceKernelGetProsperoSystemSwVersion)(uint32_t*) = dlsym((void*)0x2001, "sceKernelGetProsperoSystemSwVersion");
-    uint32_t buf[10];
-    sceKernelGetProsperoSystemSwVersion(buf);
-    uint32_t ver = buf[9] >> 16;
+    uint32_t ver = r0gdb_get_fw_version() >> 16;
     struct shellcore_patch* patches;
     switch(ver)
     {
@@ -849,10 +846,7 @@ static struct PARASITES(14) parasites_451 = {
 
 static struct parasite_desc* get_parasites(size_t* desc_size)
 {
-    int(*sceKernelGetProsperoSystemSwVersion)(uint32_t*) = dlsym((void*)0x2001, "sceKernelGetProsperoSystemSwVersion");
-    uint32_t buf[10];
-    sceKernelGetProsperoSystemSwVersion(buf);
-    uint32_t ver = buf[9] >> 16;
+    uint32_t ver = r0gdb_get_fw_version() >> 16;
     switch(ver)
     {
 #ifndef FIRMWARE_PORTING
@@ -913,18 +907,24 @@ uint64_t bench(void)
 
 int main(void* ds, int a, int b, uintptr_t c, uintptr_t d)
 {
-    p_kekcall = (char*)dlsym((void*)0x2001, "getpid") + 7;
-    if(!kekcall(0, 0, 0, 0, 0, 0, 0xffffffff00000027))
-    {
-        notify("ps5-kstuff is already loaded");
-        return 1;
-    }
     if(r0gdb_init(ds, a, b, c, d))
     {
 #ifndef FIRMWARE_PORTING
         notify("your firmware is not supported (prosper0gdb)");
         return 1;
 #endif
+    }
+#ifdef PS5KEK
+    extern uint64_t p_syscall;
+    getpid();
+    p_kekcall = (void*)p_syscall;
+#else
+    p_kekcall = (char*)dlsym((void*)0x2001, "getpid") + 7;
+#endif
+    if(!kekcall(0, 0, 0, 0, 0, 0, 0xffffffff00000027))
+    {
+        notify("ps5-kstuff is already loaded");
+        return 1;
     }
     size_t desc_size = 0;
     struct parasite_desc* desc = get_parasites(&desc_size);

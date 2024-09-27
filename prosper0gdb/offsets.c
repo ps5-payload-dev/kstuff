@@ -1,3 +1,4 @@
+#include "r0gdb.h"
 #include "offsets.h"
 
 struct offset_table offsets;
@@ -697,10 +698,7 @@ void* dlsym(void*, const char*);
 
 int set_offsets(void)
 {
-    int(*sceKernelGetProsperoSystemSwVersion)(uint32_t*) = dlsym((void*)0x2001, "sceKernelGetProsperoSystemSwVersion");
-    uint32_t buf[10];
-    sceKernelGetProsperoSystemSwVersion(buf);
-    uint32_t ver = buf[9] >> 16;
+    uint32_t ver = r0gdb_get_fw_version() >> 16;
     switch(ver)
     {
 #ifndef NO_BUILTIN_OFFSETS

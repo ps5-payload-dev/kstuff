@@ -1,8 +1,9 @@
 #ifdef __PS4__
 #define _BSD_SOURCE
 //extern int errno;
-//#define errno not_errno
 #ifdef PS5KEK
+static int errno = 1;
+#define errno not_errno
 #define pthread_t not_pthread_t
 #include <sys/thr.h>
 #else
@@ -29,8 +30,8 @@
 #include "trap_state.h"
 
 #ifdef __PS4__
-//#undef errno
 #ifdef PS5KEK
+#undef errno
 #undef pthread_t
 #endif
 #define PAGE_SIZE 16384ull
@@ -1188,11 +1189,6 @@ static void* stdio_redirect_thread(void* o)
 
 static unsigned long long start_rip;
 
-#ifdef PS5KEK
-#define sigaction(...) p_sigaction(__VA_ARGS__)
-static int(*p_sigaction)(int, const struct sigaction*, struct sigaction*);
-#endif
-
 static void tmp_sigsegv(int sig, siginfo_t* idc, void* o_uc)
 {
     ucontext_t* uc = (ucontext_t*)o_uc;
@@ -1241,12 +1237,6 @@ static void unblock_signals(void)
 
 void real_dbg_enter(uint64_t* rsp)
 {
-#ifdef PS5KEK
-    {
-        void* dlsym(void*, const char*);
-        p_sigaction = dlsym((void*)0x2001, "_sigaction");
-    }
-#endif
 #ifdef __PS4__
 #ifdef BLOB
     mprotect_rwx();

@@ -81,6 +81,9 @@ uint64_t r0gdb_kfncall(uint64_t kfn, ...);
 //kernel malloc via function call
 uint64_t r0gdb_kmalloc(size_t sz);
 
+//get current firmware version
+uint32_t r0gdb_get_fw_version(void);
+
 /* internals */
 
 extern uint64_t kstack;

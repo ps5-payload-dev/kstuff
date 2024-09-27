@@ -37,6 +37,7 @@ def get_syscalls():
 
 print('section .text')
 print('use64')
+print('global p_syscall')
 print()
 
 for idx, name in sorted(get_syscalls().items()):
