@@ -138,6 +138,8 @@ ssize_t copyout(void* dst, uint64_t src, size_t count)
     if(kwrite20(rpipe+15, (src<<8)|0x40, src>>56, 0))
         *(void* volatile*)0;
     getpid(); //leaks td_retval offset
+    volatile double x = 1; //makes sure PCB_FPUINITDONE is set
+    x += 1;
     return read(the_pipe[0], dst, count);
 }
 
@@ -264,6 +266,13 @@ static int set_sigaltstack(void)
             return -1;
     }
     return 0;
+}
+
+static void getpid_for_smsw_ax(void)
+{
+    volatile double x = 1;
+    x += 1;
+    getpid();
 }
 
 extern int in_signal_handler;

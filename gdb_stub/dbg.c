@@ -860,7 +860,7 @@ int in_signal_handler = 0;
 
 typedef long pthread_t;
 
-void pthread_create(long* p_tid, void* _2, void* f, void* arg)
+int pthread_create(long* p_tid, void* _2, void* f, void* arg)
 {
     long x, y;
     static char* stack;
@@ -887,7 +887,7 @@ void pthread_create(long* p_tid, void* _2, void* f, void* arg)
         .flags = 0,
         .rtp = NULL,
     };
-    thr_new(&param, sizeof(param));
+    return thr_new(&param, sizeof(param));
 }
 
 long pthread_self()
