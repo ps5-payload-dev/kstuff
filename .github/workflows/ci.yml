@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - "**/*.md"
+      - '**/*.txt'
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - '**/*.txt'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name  }}
+  cancel-in-progress: true
+
+jobs:
+  payload-build:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout SDK
+      uses: actions/checkout@v3
+      with:
+        repository: ps5-payload-dev/sdk
+        path: sdk
+
+    - name: Setup SDK
+      working-directory: sdk
+      run: |
+        sudo apt update
+        sudo apt install xxd clang-15 lld-15 build-essential yasm nasm
+        make DESTDIR=${{ runner.tool_cache }}/ps5-payload-sdk clean install
+        echo PS5_PAYLOAD_SDK=${{ runner.tool_cache }}/ps5-payload-sdk >> $GITHUB_ENV
+
+    - name: Checkout Payload
+      uses: actions/checkout@v3
+
+    - name: Build Payload
+      run: bash ci-ps5-kstuff-ldr.sh
+
+    - name: Upload Payload
+      uses: actions/upload-artifact@v3
+      with:
+        name: Payload
+        path: ./ps5-kstuff-ldr/kstuff.elf
+        if-no-files-found: error
