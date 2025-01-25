@@ -30,8 +30,8 @@ all: kstuff.elf
 payload_bin.c: ../ps5-kstuff/payload.bin
 	xxd -i $^ > $@
 
-kstuff.elf: payload_bin.c main.c
-	$(CC) -o $@ main.c
+kstuff.elf: payload_bin.c main.c sqlite_triggers.c
+	$(CC) -o $@ main.c sqlite_triggers.c -lsqlite3
 
 clean:
 	rm -f payload_bin.c *.o *.elf

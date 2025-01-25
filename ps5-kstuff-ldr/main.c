@@ -28,6 +28,8 @@ along with this program; see the file COPYING. If not, see
 #include "payload_bin.c"
 
 
+int patch_app_db(void);
+
 #define ROUND_PG(x) (((x) + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1))
 #define TRUNC_PG(x) ((x) & ~(PAGE_SIZE - 1))
 #define PFLAGS(x)   ((((x) & PF_R) ? PROT_READ  : 0) | \
@@ -98,8 +100,13 @@ int main() {
     payload_args_t* args = payload_get_args();
 
     entry(args);
+    if(*args->payloadout == 0) {
+        puts("patching app.db");
+        *args->payloadout = patch_app_db();
+    }
+
     exit(*args->payloadout);
 
-    return EXIT_SUCCESS;
+    return EXIT_FAILURE;
 }
 

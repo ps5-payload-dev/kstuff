@@ -20,25 +20,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Checkout SDK
+    - name: Checkout
       uses: actions/checkout@v3
-      with:
-        repository: ps5-payload-dev/sdk
-        path: sdk
 
-    - name: Setup SDK
-      working-directory: sdk
+    - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install xxd clang-15 lld-15 build-essential yasm nasm
-        make DESTDIR=${{ runner.tool_cache }}/ps5-payload-sdk clean install
-        echo PS5_PAYLOAD_SDK=${{ runner.tool_cache }}/ps5-payload-sdk >> $GITHUB_ENV
+        sudo apt install build-essential clang-15 lld-15 xxd yasm nasm
 
-    - name: Checkout Payload
-      uses: actions/checkout@v3
+    - name: Install toolchain
+      run: |
+        wget https://github.com/ps5-payload-dev/pacbrew-repo/releases/latest/download/ps5-payload-dev.tar.gz
+        sudo tar xf ps5-payload-dev.tar.gz -C /
 
     - name: Build Payload
-      run: bash ci-ps5-kstuff-ldr.sh
+      run: |
+        export PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk
+        bash ci-ps5-kstuff-ldr.sh
 
     - name: Upload Payload
       uses: actions/upload-artifact@v3

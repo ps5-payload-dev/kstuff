@@ -1140,7 +1140,7 @@ int main(void* ds, int a, int b, uintptr_t c, uintptr_t d)
     patch_shellcore(shellcore_patches, n_shellcore_patches, shellcore_eh_frame_offset);
     gdb_remote_syscall("write", 3, 0, (uintptr_t)1, (uintptr_t)"done\npatching app.db... ", (uintptr_t)24);
 #ifndef FIRMWARE_PORTING
-    patch_app_db();
+    //patch_app_db();
 #endif
     gdb_remote_syscall("write", 3, 0, (uintptr_t)1, (uintptr_t)"done\n", (uintptr_t)5);
 #ifndef DEBUG
