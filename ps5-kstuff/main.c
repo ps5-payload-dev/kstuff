@@ -12,8 +12,18 @@
 #include "../gdb_stub/dbg.h"
 #include "uelf/structs.h"
 #include "uelf/parasite_desc.h"
+#include <sys/stat.h>
 
 void* dlsym(void*, const char*);
+
+bool if_exists(const char *path) {
+  struct stat buffer;
+  return stat(path, &buffer) == 0;
+}
+
+bool sceKernelIsTestKit() {
+  return if_exists("/system/priv/lib/libSceDeci5Ttyp.sprx");
+}
 
 void notify(const char* s)
 {
@@ -1137,7 +1147,10 @@ int main(void* ds, int a, int b, uintptr_t c, uintptr_t d)
 #endif
     copyin(IDT+16*9+5, "\x8e", 1);
     copyin(IDT+16*179+5, "\x8e", 1);
-    patch_shellcore(shellcore_patches, n_shellcore_patches, shellcore_eh_frame_offset);
+    
+    if(!sceKernelIsTestKit())
+        patch_shellcore(shellcore_patches, n_shellcore_patches, shellcore_eh_frame_offset);
+    
     gdb_remote_syscall("write", 3, 0, (uintptr_t)1, (uintptr_t)"done\npatching app.db... ", (uintptr_t)24);
 #ifndef FIRMWARE_PORTING
     patch_app_db();
