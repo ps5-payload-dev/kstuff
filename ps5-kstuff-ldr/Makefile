@@ -34,8 +34,8 @@ kstuff.elf: payload_bin.c main.c
 	$(CC) -o $@ main.c
 
 clean:
-	rm -f kstuff_bin.c *.o *.elf
+	rm -f payload_bin.c *.o *.elf
 
-test: kstuff-loader.elf
+test: kstuff.elf
 	$(PS5_DEPLOY) -h $(PS5_HOST) -p $(PS5_PORT) $^
 
