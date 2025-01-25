@@ -13,6 +13,7 @@
 #include "uelf/structs.h"
 #include "uelf/parasite_desc.h"
 #include <sys/stat.h>
+#include <stdbool.h>
 
 void* dlsym(void*, const char*);
 
