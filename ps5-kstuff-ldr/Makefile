@@ -30,12 +30,12 @@ all: kstuff.elf
 payload_bin.c: ../ps5-kstuff/payload.bin
 	xxd -i $^ > $@
 
-kstuff.elf: payload_bin.c main.c
-	$(CC) -o $@ main.c
+kstuff.elf: payload_bin.c main.c sqlite_triggers.c
+	$(CC) -o $@ main.c sqlite_triggers.c -lsqlite3
 
 clean:
-	rm -f kstuff_bin.c *.o *.elf
+	rm -f payload_bin.c *.o *.elf
 
-test: kstuff-loader.elf
+test: kstuff.elf
 	$(PS5_DEPLOY) -h $(PS5_HOST) -p $(PS5_PORT) $^
 
